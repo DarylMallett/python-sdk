@@ -13,7 +13,7 @@ Example:
 """
 
 from .client import Mailchk, AsyncMailchk
-from .models import ValidationResult, BulkValidationResult, UsageInfo
+from .models import ValidationResult, BulkValidationResult, UsageInfo, MxRecord
 from .exceptions import (
     MailchkError,
     AuthenticationError,
@@ -22,13 +22,14 @@ from .exceptions import (
     APIError,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = [
     "Mailchk",
     "AsyncMailchk",
     "ValidationResult",
     "BulkValidationResult",
     "UsageInfo",
+    "MxRecord",
     "MailchkError",
     "AuthenticationError",
     "RateLimitError",

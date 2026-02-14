@@ -49,9 +49,9 @@ class Mailchk:
         self._session = requests.Session()
         self._session.headers.update(
             {
-                "Authorization": f"Bearer {api_key}",
+                "X-API-Key": api_key,
                 "Content-Type": "application/json",
-                "User-Agent": "mailchk-python/1.0.0",
+                "User-Agent": "mailchk-python/1.1.0",
             }
         )
 
@@ -109,12 +109,12 @@ class Mailchk:
 
         Example:
             >>> result = client.validate("test@gmail.com")
-            >>> print(f"Valid: {result.valid}, Risk: {result.risk}")
+            >>> print(f"Valid: {result.valid}, Risk: {result.risk_score}")
         """
         if not email or "@" not in email:
             raise ValidationError("Invalid email format")
 
-        data = self._request("POST", "/validate", json={"email": email})
+        data = self._request("POST", "/check", json={"email": email})
         return ValidationResult.from_dict(data)
 
     def validate_bulk(
@@ -140,7 +140,7 @@ class Mailchk:
         if len(emails) > 100:
             raise ValidationError("Maximum 100 emails per request")
 
-        data = self._request("POST", "/validate/bulk", json={"emails": list(emails)})
+        data = self._request("POST", "/check/bulk", json={"emails": list(emails)})
         return BulkValidationResult.from_dict(data)
 
     def is_disposable(self, email: str) -> bool:
@@ -169,7 +169,7 @@ class Mailchk:
         result = self.validate(email)
         return result.valid
 
-    def get_risk_score(self, email: str) -> int:
+    def get_risk_score(self, email: str) -> str:
         """
         Get the risk score for an email address.
 
@@ -177,10 +177,23 @@ class Mailchk:
             email: The email address to check
 
         Returns:
-            Risk score from 0 (safe) to 100 (high risk)
+            Risk level: 'low', 'medium', 'high', or 'critical'
         """
         result = self.validate(email)
         return result.risk_score
+
+    def get_deliverability_score(self, email: str) -> int:
+        """
+        Get the deliverability score for an email address.
+
+        Args:
+            email: The email address to check
+
+        Returns:
+            Deliverability score from 0 (undeliverable) to 100 (highly deliverable)
+        """
+        result = self.validate(email)
+        return result.deliverability_score
 
     def check_mx(self, domain: str) -> bool:
         """
@@ -269,9 +282,9 @@ class AsyncMailchk:
             self._session = aiohttp.ClientSession(
                 timeout=self.timeout,
                 headers={
-                    "Authorization": f"Bearer {self.api_key}",
+                    "X-API-Key": self.api_key,
                     "Content-Type": "application/json",
-                    "User-Agent": "mailchk-python/1.0.0",
+                    "User-Agent": "mailchk-python/1.1.0",
                 },
             )
         return self._session
@@ -324,7 +337,7 @@ class AsyncMailchk:
         if not email or "@" not in email:
             raise ValidationError("Invalid email format")
 
-        data = await self._request("POST", "/validate", json={"email": email})
+        data = await self._request("POST", "/check", json={"email": email})
         return ValidationResult.from_dict(data)
 
     async def validate_bulk(
@@ -338,7 +351,7 @@ class AsyncMailchk:
             raise ValidationError("Maximum 100 emails per request")
 
         data = await self._request(
-            "POST", "/validate/bulk", json={"emails": list(emails)}
+            "POST", "/check/bulk", json={"emails": list(emails)}
         )
         return BulkValidationResult.from_dict(data)
 
@@ -351,6 +364,26 @@ class AsyncMailchk:
         """Quick async check if an email is valid."""
         result = await self.validate(email)
         return result.valid
+
+    async def get_risk_score(self, email: str) -> str:
+        """
+        Get the risk score for an email address asynchronously.
+
+        Returns:
+            Risk level: 'low', 'medium', 'high', or 'critical'
+        """
+        result = await self.validate(email)
+        return result.risk_score
+
+    async def get_deliverability_score(self, email: str) -> int:
+        """
+        Get the deliverability score for an email address asynchronously.
+
+        Returns:
+            Deliverability score from 0 (undeliverable) to 100 (highly deliverable)
+        """
+        result = await self.validate(email)
+        return result.deliverability_score
 
     async def get_usage(self) -> UsageInfo:
         """Get current API usage information asynchronously."""
