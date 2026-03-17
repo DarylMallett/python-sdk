@@ -1,7 +1,9 @@
 """Mailchk API client implementations."""
 
-from typing import Sequence
+from typing import Sequence, Optional, Dict, Any
 import requests
+import os
+import time
 
 from .models import ValidationResult, BulkValidationResult, UsageInfo
 from .exceptions import (
@@ -31,6 +33,8 @@ class Mailchk:
         api_key: str,
         base_url: str | None = None,
         timeout: int = DEFAULT_TIMEOUT,
+        retry_attempts: int = 3,
+        retry_delay: float = 1.0,
     ):
         """
         Initialize the Mailchk client.
@@ -39,6 +43,8 @@ class Mailchk:
             api_key: Your Mailchk API key
             base_url: Optional custom API base URL
             timeout: Request timeout in seconds (default: 30)
+            retry_attempts: Number of retry attempts for retryable errors
+            retry_delay: Delay between retries in seconds
         """
         if not api_key:
             raise AuthenticationError("API key is required")
@@ -46,14 +52,64 @@ class Mailchk:
         self.api_key = api_key
         self.base_url = base_url or self.BASE_URL
         self.timeout = timeout
+        self.retry_attempts = retry_attempts
+        self.retry_delay = retry_delay
         self._session = requests.Session()
         self._session.headers.update(
             {
                 "X-API-Key": api_key,
                 "Content-Type": "application/json",
-                "User-Agent": "mailchk-python/1.1.0",
+                "User-Agent": "mailchk-python/1.2.0",
             }
         )
+
+    @classmethod
+    def from_environment(
+        cls,
+        api_key_env: str = "MAILCHK_API_KEY",
+        base_url_env: str = "MAILCHK_BASE_URL", 
+        timeout_env: str = "MAILCHK_TIMEOUT",
+        **kwargs
+    ) -> "Mailchk":
+        """
+        Create a client from environment variables.
+        
+        Args:
+            api_key_env: Environment variable name for API key
+            base_url_env: Environment variable name for base URL
+            timeout_env: Environment variable name for timeout
+            **kwargs: Additional client configuration
+            
+        Returns:
+            Configured Mailchk client
+            
+        Raises:
+            AuthenticationError: If API key is not found
+            
+        Example:
+            >>> # Set environment variables:
+            >>> # export MAILCHK_API_KEY="your-api-key"
+            >>> # export MAILCHK_TIMEOUT="60"
+            >>> client = Mailchk.from_environment()
+        """
+        api_key = os.getenv(api_key_env)
+        if not api_key:
+            raise AuthenticationError(f"Environment variable '{api_key_env}' is required")
+        
+        config = {"api_key": api_key, **kwargs}
+        
+        base_url = os.getenv(base_url_env)
+        if base_url:
+            config["base_url"] = base_url
+        
+        timeout = os.getenv(timeout_env)
+        if timeout:
+            try:
+                config["timeout"] = int(timeout)
+            except ValueError:
+                pass  # Ignore invalid timeout values
+        
+        return cls(**config)
 
     def _request(
         self,
@@ -249,6 +305,8 @@ class AsyncMailchk:
         api_key: str,
         base_url: str | None = None,
         timeout: int = DEFAULT_TIMEOUT,
+        retry_attempts: int = 3,
+        retry_delay: float = 1.0,
     ):
         """
         Initialize the async Mailchk client.
@@ -257,6 +315,8 @@ class AsyncMailchk:
             api_key: Your Mailchk API key
             base_url: Optional custom API base URL
             timeout: Request timeout in seconds (default: 30)
+            retry_attempts: Number of retry attempts for retryable errors
+            retry_delay: Delay between retries in seconds
         """
         try:
             import aiohttp
@@ -272,7 +332,51 @@ class AsyncMailchk:
         self.api_key = api_key
         self.base_url = base_url or self.BASE_URL
         self.timeout = aiohttp.ClientTimeout(total=timeout)
+        self.retry_attempts = retry_attempts
+        self.retry_delay = retry_delay
         self._session: "aiohttp.ClientSession | None" = None
+
+    @classmethod
+    def from_environment(
+        cls,
+        api_key_env: str = "MAILCHK_API_KEY",
+        base_url_env: str = "MAILCHK_BASE_URL",
+        timeout_env: str = "MAILCHK_TIMEOUT",
+        **kwargs
+    ) -> "AsyncMailchk":
+        """
+        Create an async client from environment variables.
+        
+        Args:
+            api_key_env: Environment variable name for API key
+            base_url_env: Environment variable name for base URL
+            timeout_env: Environment variable name for timeout
+            **kwargs: Additional client configuration
+            
+        Returns:
+            Configured AsyncMailchk client
+            
+        Raises:
+            AuthenticationError: If API key is not found
+        """
+        api_key = os.getenv(api_key_env)
+        if not api_key:
+            raise AuthenticationError(f"Environment variable '{api_key_env}' is required")
+        
+        config = {"api_key": api_key, **kwargs}
+        
+        base_url = os.getenv(base_url_env)
+        if base_url:
+            config["base_url"] = base_url
+        
+        timeout = os.getenv(timeout_env)
+        if timeout:
+            try:
+                config["timeout"] = int(timeout)
+            except ValueError:
+                pass  # Ignore invalid timeout values
+        
+        return cls(**config)
 
     async def _get_session(self) -> "aiohttp.ClientSession":
         """Get or create the aiohttp session."""
@@ -284,7 +388,7 @@ class AsyncMailchk:
                 headers={
                     "X-API-Key": self.api_key,
                     "Content-Type": "application/json",
-                    "User-Agent": "mailchk-python/1.1.0",
+                    "User-Agent": "mailchk-python/1.2.0",
                 },
             )
         return self._session

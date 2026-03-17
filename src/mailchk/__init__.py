@@ -21,8 +21,9 @@ from .exceptions import (
     ValidationError,
     APIError,
 )
+from .config import from_environment, get_client, configure
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __all__ = [
     "Mailchk",
     "AsyncMailchk",
@@ -35,4 +36,7 @@ __all__ = [
     "RateLimitError",
     "ValidationError",
     "APIError",
+    "from_environment",
+    "get_client",
+    "configure"
 ]

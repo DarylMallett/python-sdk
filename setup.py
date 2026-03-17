@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="mailchk",
-    version="1.0.0",
+    version="1.2.0",
     author="Mailchk",
     author_email="support@mailchk.io",
     description="Official Python SDK for Mailchk email validation API",
@@ -35,9 +35,26 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "requests>=2.25.0",
+        "python-dotenv>=0.19.0",
     ],
     extras_require={
         "async": ["aiohttp>=3.8.0"],
-        "dev": ["pytest", "pytest-asyncio", "responses"],
+        "django": ["django>=3.2"],
+        "fastapi": ["pydantic>=1.8.0"],
+        "dev": [
+            "pytest>=7.0.0",
+            "pytest-asyncio>=0.21.0",
+            "responses>=0.20.0",
+            "pytest-cov>=4.0.0",
+            "black>=22.0.0",
+            "isort>=5.10.0",
+            "mypy>=1.0.0",
+            "flake8>=5.0.0"
+        ],
+        "all": [
+            "aiohttp>=3.8.0",
+            "django>=3.2",
+            "pydantic>=1.8.0"
+        ]
     },
 )
